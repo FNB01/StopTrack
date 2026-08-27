@@ -351,7 +351,7 @@ function realtimeIniciar() {
 
     console.log("Realtime: inscrevendo na tabela paradas...");
 
-    supabaseClient
+    const canal = supabaseClient
         .channel("paradas-realtime")
         .on(
             "postgres_changes",
@@ -452,6 +452,26 @@ function realtimeIniciar() {
         )
         .subscribe(function(status) {
             console.log("Realtime: status do canal:", status);
+
+            if (status === "SUBSCRIBED") {
+
+                console.log("Realtime: conectado e recebendo eventos.");
+
+                return;
+            }
+
+            if (
+                status === "CHANNEL_ERROR" ||
+                status === "TIMED_OUT" ||
+                status === "CLOSED"
+            ) {
+
+                supabaseClient.removeChannel(canal);
+
+                realtimeAtivo = false;
+
+                setTimeout(realtimeIniciar, 5000);
+            }
         });
 }
 
