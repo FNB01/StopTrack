@@ -320,6 +320,10 @@ let recentementeEnviados = new Set();
 
 let realtimeAtivo = false;
 
+var realtimeStatusAtual = "AGUARDANDO";
+
+var realtimeEventosRecebidos = 0;
+
 
 function supabaseParaLocal(registro) {
 
@@ -366,6 +370,8 @@ function realtimeIniciar() {
                     "Realtime: evento recebido:",
                     payload.eventType
                 );
+
+                realtimeStatusAtualizar(realtimeStatusAtual, true);
 
                 var tipo = payload.eventType;
                 var dados = payload.new;
@@ -453,6 +459,10 @@ function realtimeIniciar() {
         .subscribe(function(status) {
             console.log("Realtime: status do canal:", status);
 
+            realtimeStatusAtual = status;
+
+            realtimeStatusAtualizar(status, false);
+
             if (status === "SUBSCRIBED") {
 
                 console.log("Realtime: conectado e recebendo eventos.");
@@ -473,6 +483,62 @@ function realtimeIniciar() {
                 setTimeout(realtimeIniciar, 5000);
             }
         });
+}
+
+
+function realtimeStatusAtualizar(status, evento) {
+
+    var badge = document.getElementById("realtimeStatus");
+
+    if (!badge) {
+
+        badge = document.createElement("div");
+
+        badge.id = "realtimeStatus";
+
+        badge.style.position = "fixed";
+        badge.style.top = "6px";
+        badge.style.right = "6px";
+        badge.style.zIndex = "9999";
+        badge.style.font = "11px monospace";
+        badge.style.fontWeight = "bold";
+        badge.style.background = "rgba(0,0,0,0.75)";
+        badge.style.color = "#fff";
+        badge.style.padding = "2px 8px";
+        badge.style.borderRadius = "10px";
+
+        document.body.appendChild(badge);
+    }
+
+    if (evento) {
+
+        realtimeEventosRecebidos++;
+
+        badge.style.background = "#b8860b";
+
+        setTimeout(function() {
+            badge.style.background = "rgba(0,0,0,0.75)";
+        }, 700);
+    }
+
+    var cor = "#fff";
+
+    if (status === "SUBSCRIBED") {
+        cor = "#2ecc71";
+    } else if (status === "CHANNEL_ERROR") {
+        cor = "#e74c3c";
+    } else if (status === "TIMED_OUT") {
+        cor = "#e67e22";
+    } else if (status === "CLOSED") {
+        cor = "#95a5a6";
+    }
+
+    badge.style.color = cor;
+
+    badge.textContent =
+        "REALTIME: " + status +
+        " · " + realtimeEventosRecebidos +
+        " eventos";
 }
 
 
