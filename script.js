@@ -295,7 +295,7 @@ async function syncEnviarPendentes() {
 }
 
 
-function syncIniciar() {
+async function syncIniciar() {
 
     window.addEventListener("online", function() {
 
@@ -303,11 +303,139 @@ function syncIniciar() {
             "Online detectado. Sincronizando..."
         );
 
-        syncEnviarPendentes();
+        syncPuxarParadas().then(function() {
+            syncEnviarPendentes();
+        });
     });
 
-    if (navigator.onLine) {
-        syncEnviarPendentes();
+    await syncPuxarParadas();
+
+    syncEnviarPendentes();
+}
+
+
+// ============================================================
+// SUPABASE - PULL INICIAL + MESCLAGEM
+// ============================================================
+
+
+function mesclarParadas(locais, remotos) {
+
+    const fila = carregarFilaSync();
+
+    const idsPendentesGravacao = new Set();
+    const idsPendentesExclusao = new Set();
+
+    fila.forEach(function(op) {
+
+        if (op.enviado) {
+            return;
+        }
+
+        if (op.tipo === "criar" || op.tipo === "editar") {
+
+            const id = op.dados ? op.dados.id : null;
+
+            if (id !== null && id !== undefined) {
+                idsPendentesGravacao.add(String(id));
+            }
+
+        } else if (op.tipo === "excluir") {
+
+            if (op.id !== null && op.id !== undefined) {
+                idsPendentesExclusao.add(String(op.id));
+            }
+        }
+    });
+
+    const mapa = new Map();
+
+    locais.forEach(function(parada) {
+
+        if (!parada) {
+            return;
+        }
+
+        if (parada.id === undefined || parada.id === null) {
+            return;
+        }
+
+        mapa.set(String(parada.id), parada);
+    });
+
+    remotos.forEach(function(parada) {
+
+        if (!parada) {
+            return;
+        }
+
+        if (parada.id === undefined || parada.id === null) {
+            return;
+        }
+
+        const chave = String(parada.id);
+
+        if (idsPendentesExclusao.has(chave)) {
+            return;
+        }
+
+        if (idsPendentesGravacao.has(chave)) {
+            return;
+        }
+
+        mapa.set(chave, parada);
+    });
+
+    return Array.from(mapa.values());
+}
+
+
+async function syncPuxarParadas() {
+
+    if (!supabaseClient) {
+        return;
+    }
+
+    try {
+
+        const { data, error } = await supabaseClient
+            .from(NOME_TABELA)
+            .select("*");
+
+        if (error) {
+
+            console.error(
+                "Pull de paradas: erro ao buscar no Supabase:",
+                error.message
+            );
+
+            return;
+        }
+
+        const remotas = (data || []).map(supabaseParaLocal);
+
+        const mescladas = mesclarParadas(
+            carregarParadas(),
+            remotas
+        );
+
+        salvarTodasParadas(mescladas);
+
+        console.log(
+            "Pull de paradas concluído:",
+            remotas.length,
+            "remotas,",
+            mescladas.length,
+            "após mesclagem."
+        );
+
+    } catch (e) {
+
+        console.error(
+            "Pull de paradas: sem rede ou erro inesperado. " +
+            "Dados locais preservados.",
+            e.message
+        );
     }
 }
 
