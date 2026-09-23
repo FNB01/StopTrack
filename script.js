@@ -29,7 +29,7 @@ if (window.supabase) {
 // ============================================================
 
 const motivosParada = [
-    "Manutenção preventiva/corretiva",
+    "Manutenção corretiva",
     "Falta de insumos",
     "Operador ausente",
     "Ajuste de processo / qualidade",
@@ -2704,7 +2704,17 @@ function gerarResumoPorSala(paradasPeriodo) {
 
     });
 
-    return Object.keys(dadosPorSala).map(function(sala) {
+    return Object.keys(dadosPorSala)
+
+        .filter(function(sala) {
+
+            return (
+                dadosPorSala[sala].paradas.length > 0
+            );
+
+        })
+
+        .map(function(sala) {
 
         const grupo = dadosPorSala[sala];
         const responsaveisDosRegistros = [];
