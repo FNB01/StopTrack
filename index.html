@@ -5,8 +5,8 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" type="image/png" href="stoptrack-icon-512_043602.png">
-<link rel="apple-touch-icon" href="stoptrack-icon-512_043602.png">
+<link rel="icon" type="image/png" href="assets/stoptrack-icon-512_043602.png">
+<link rel="apple-touch-icon" href="assets/stoptrack-icon-512_043602.png">
   
   <link rel="manifest" href="manifest.json">
   
@@ -24,6 +24,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="script.js?v=20260922"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+  }
+</script>
 
 </body>
 </html>

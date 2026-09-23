@@ -1,0 +1,16 @@
+{
+  "name": "STOPTRACK",
+  "short_name": "STOPTRACK",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f2f2f2",
+  "theme_color": "#1976d2",
+  "icons": [
+    {
+      "src": "assets/stoptrack-icon-512_043602.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
