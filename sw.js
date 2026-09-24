@@ -59,7 +59,7 @@ self.addEventListener("install", function(evento) {
 
 self.addEventListener("activate", function(evento) {
 
-    event
+    evento
         .waitUntil(
             caches
                 .keys()
@@ -160,6 +160,50 @@ self.addEventListener("fetch", function(evento) {
 
                                 return caches.match("./");
                             });
+                    })
+            );
+
+        return;
+    }
+
+    // ========================================================
+    // script.js (versão versionada)
+    // Estratégia: NETWORK FIRST com fallback para o cache.
+    // Quando online, busca a versão mais nova do código;
+    // offline, usa a cópia salva em cache.
+    // ========================================================
+
+    if (
+        url.pathname.indexOf("script.js") !== -1 &&
+        url.search.indexOf("v=" + VERSAO_ARQUIVOS) !== -1
+    ) {
+
+        event
+            .respondWith(
+                fetch(requisicao)
+                    .then(function(respostaRede) {
+
+                        if (respostaRede && respostaRede.ok) {
+
+                            var copia =
+                                respostaRede.clone();
+
+                            caches
+                                .open(CACHE_NAME)
+                                .then(function(cache) {
+
+                                    cache.put(
+                                        requisicao,
+                                        copia
+                                    );
+                                });
+                        }
+
+                        return respostaRede;
+                    })
+                    .catch(function() {
+
+                        return caches.match(requisicao);
                     })
             );
 
