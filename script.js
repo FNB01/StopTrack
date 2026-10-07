@@ -38,6 +38,19 @@ const motivosParada = [
     "Outros"
 ];
 
+
+function rotuloMotivo(parada) {
+
+    if (
+        parada.motivo === "Falta de insumos" &&
+        parada.tipoInsumo
+    ) {
+        return "Falta de insumos — " + parada.tipoInsumo;
+    }
+
+    return parada.motivo;
+}
+
 // ============================================================
 // SALAS POR RESPONSÁVEL
 // ============================================================
@@ -1716,7 +1729,7 @@ function abrirHistoricoIndividual(sala) {
 
                     <p>
                         <b>⚠️ Motivo:</b>
-                        ${parada.motivo}
+                        ${rotuloMotivo(parada)}
                     </p>
 
                     <p>
@@ -2692,15 +2705,15 @@ function gerarResumoPorSala(paradasPeriodo) {
             grupo.totalMinutos += duracao;
         }
 
-        if (!grupo.motivos[parada.motivo]) {
-            grupo.motivos[parada.motivo] = {
+        if (!grupo.motivos[rotuloMotivo(parada)]) {
+            grupo.motivos[rotuloMotivo(parada)] = {
                 quantidade: 0,
                 minutos: 0
             };
         }
 
-        grupo.motivos[parada.motivo].quantidade += 1;
-        grupo.motivos[parada.motivo].minutos += duracao || 0;
+        grupo.motivos[rotuloMotivo(parada)].quantidade += 1;
+        grupo.motivos[rotuloMotivo(parada)].minutos += duracao || 0;
 
     });
 
@@ -2996,14 +3009,16 @@ function gerarRelatorio() {
         // MOTIVOS
         // ----------------------------------------------------
 
-        if (!motivos[parada.motivo]) {
+        const rotulo = rotuloMotivo(parada);
 
-            motivos[parada.motivo] = 0;
+        if (!motivos[rotulo]) {
+
+            motivos[rotulo] = 0;
 
         }
 
 
-        motivos[parada.motivo] +=
+        motivos[rotulo] +=
             duracao;
 
 
@@ -3195,7 +3210,7 @@ function gerarRelatorio() {
 
                         <p>
                             <b>⚠️ Motivo:</b>
-                            ${item.motivo}
+                            ${rotuloMotivo(item)}
                         </p>
 
 
