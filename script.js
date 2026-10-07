@@ -39,6 +39,15 @@ const motivosParada = [
 ];
 
 
+const tiposInsumo = [
+    "Rótulo",
+    "Cartucho",
+    "Cápsula",
+    "Matéria-prima",
+    "Outro"
+];
+
+
 function rotuloMotivo(parada) {
 
     if (
@@ -124,6 +133,33 @@ function preencherHorarioAtual() {
 }
 
 
+function atualizarCampoTipoInsumo(prefixo) {
+
+    const motivoEl =
+        document.getElementById(prefixo + "Motivo");
+
+    const campo =
+        document.getElementById(prefixo + "CampoTipoInsumo");
+
+    const select =
+        document.getElementById(prefixo + "TipoInsumo");
+
+    if (!motivoEl || !campo || !select) {
+        return;
+    }
+
+    if (motivoEl.value === "Falta de insumos") {
+
+        campo.style.display = "block";
+
+    } else {
+
+        campo.style.display = "none";
+        select.value = "";
+    }
+}
+
+
 function obterHoraComSegundos() {
 
     const d = new Date();
@@ -206,6 +242,7 @@ function paradaParaSupabase(parada) {
         sala: parada.sala,
         motivo: parada.motivo,
         observacao: parada.observacao,
+        tipoinsumo: parada.tipoInsumo || null,
         data: parada.data,
         horainicio: parada.horaInicio,
         horafim: parada.horaFim || null,
@@ -470,6 +507,7 @@ function supabaseParaLocal(registro) {
         sala: registro.sala,
         motivo: registro.motivo,
         observacao: registro.observacao,
+        tipoInsumo: registro.tipoinsumo,
         data: registro.data,
         horaInicio: registro.horainicio,
         horaFim: registro.horafim,
@@ -1350,7 +1388,10 @@ function mostrarTelaRegistro() {
 
             <br>
 
-            <select id="novoMotivo">
+            <select
+                id="novoMotivo"
+                onchange="atualizarCampoTipoInsumo('novo')"
+            >
 
                 ${motivosParada.map(function(m) {
 
@@ -1363,6 +1404,39 @@ function mostrarTelaRegistro() {
                 }).join("")}
 
             </select>
+
+            <br><br>
+
+            <div
+                id="novoCampoTipoInsumo"
+                style="display:none;"
+            >
+
+                <label>
+                    <b>📦 Tipo de insumo:</b>
+                </label>
+
+                <br>
+
+                <select id="novoTipoInsumo">
+
+                    <option value="">
+                        Selecione...
+                    </option>
+
+                    ${tiposInsumo.map(function(t) {
+
+                        return `
+                            <option value="${t}">
+                                ${t}
+                            </option>
+                        `;
+
+                    }).join("")}
+
+                </select>
+
+            </div>
 
             <br><br>
 
@@ -1427,6 +1501,12 @@ function salvarNovaParada() {
         ).value.trim();
 
 
+    const tipoInsumo =
+        document.getElementById(
+            "novoTipoInsumo"
+        ).value;
+
+
     // --------------------------------------------------------
     // VALIDAÇÃO
     // --------------------------------------------------------
@@ -1435,6 +1515,29 @@ function salvarNovaParada() {
 
         alert(
             "Preencha a data, horário e motivo."
+        );
+
+        return;
+    }
+
+
+    if (!observacao) {
+
+        alert(
+            "A observação é obrigatória."
+        );
+
+        return;
+    }
+
+
+    if (
+        motivo === "Falta de insumos" &&
+        !tipoInsumo
+    ) {
+
+        alert(
+            "Selecione o tipo de insumo."
         );
 
         return;
@@ -1487,6 +1590,8 @@ function salvarNovaParada() {
         motivo: motivo,
 
         observacao: observacao,
+
+        tipoInsumo: tipoInsumo,
 
         data: data,
 
@@ -1909,7 +2014,10 @@ function editarParada(id) {
 
             <br>
 
-            <select id="editarMotivo">
+            <select
+                id="editarMotivo"
+                onchange="atualizarCampoTipoInsumo('editar')"
+            >
 
                 ${motivosParada.map(function(m) {
 
@@ -1929,6 +2037,51 @@ function editarParada(id) {
                 }).join("")}
 
             </select>
+
+            <br><br>
+
+
+            <div
+                id="editarCampoTipoInsumo"
+                style="display:${
+                    parada.motivo === "Falta de insumos"
+                    ? "block"
+                    : "none"
+                };"
+            >
+
+                <label>
+                    <b>📦 Tipo de insumo:</b>
+                </label>
+
+                <br>
+
+                <select id="editarTipoInsumo">
+
+                    <option value="">
+                        Selecione...
+                    </option>
+
+                    ${tiposInsumo.map(function(t) {
+
+                        return `
+                            <option
+                                value="${t}"
+                                ${
+                                    parada.tipoInsumo === t
+                                    ? "selected"
+                                    : ""
+                                }
+                            >
+                                ${t}
+                            </option>
+                        `;
+
+                    }).join("")}
+
+                </select>
+
+            </div>
 
             <br><br>
 
@@ -2005,6 +2158,11 @@ function salvarEdicao(id) {
         .trim();
 
 
+    const tipoInsumo =
+        document.getElementById("editarTipoInsumo")
+        .value;
+
+
     // --------------------------------------------------------
     // VALIDAÇÃO
     // --------------------------------------------------------
@@ -2013,6 +2171,29 @@ function salvarEdicao(id) {
 
         alert(
             "Data, horário inicial e motivo são obrigatórios."
+        );
+
+        return;
+    }
+
+
+    if (!observacao) {
+
+        alert(
+            "A observação é obrigatória."
+        );
+
+        return;
+    }
+
+
+    if (
+        motivo === "Falta de insumos" &&
+        !tipoInsumo
+    ) {
+
+        alert(
+            "Selecione o tipo de insumo."
         );
 
         return;
@@ -2051,6 +2232,8 @@ function salvarEdicao(id) {
     paradas[index].motivo = motivo;
 
     paradas[index].observacao = observacao;
+
+    paradas[index].tipoInsumo = tipoInsumo;
 
 
     // --------------------------------------------------------
