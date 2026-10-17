@@ -67,38 +67,109 @@ function rotuloMotivo(parada) {
 const salasPorResponsavel = {
 
     "Raul Fonseca": [
-        "Sala de Envase de Blister",
-        "Sala de Rotulagem Cápsulas",
-        "Sala de Conferência",
-        "Sala de Encartuchamento (térreo)"
+        "BLISTER",
+        "ROTULAGEM DE ENCAPSULADOS",
+        "CONFERENCIA",
+        "ENCARTUCHAMENTO 2"
     ],
 
     "Brunelly Marvila": [
-        "Sala de Envase de Pó",
-        "Sala de Envase de Sachê",
-        "Sala de Envase de Cápsulas",
-        "Sala de Datação (térreo)"
+        "ENVASE DE PÓ",
+        "SACHÊS",
+        "ENVASE DE CÁPSULAS",
+        "ENCARTUCHAMENTO 1"
     ],
 
     "Cleyton Candal": [
-        "Encapsulamento 1",
-        "Encapsulamento 2",
-        "Encapsulamento 3",
-        "Encapsulamento 4",
-        "Encapsulamento 5",
-        "Polimento Capsulas"
+        "ENCAPSULAMENTO 1",
+        "ENCAPSULAMENTO 2",
+        "ENCAPSULAMENTO 3",
+        "ENCAPSULAMENTO 4",
+        "ENCAPSULAMENTO 5",
+        "POLIMENTO",
+        "COMPRESSÃO-(COMPRIMIDOS)"
     ],
 
     "Luiz Claudio": [
-        "Sala de Datação (Líquidos)",
-        "Sala de Rotulagem (Líquidos)",
-        "Sala de Envase (Líquidos)"
+        "ENCARTUCHAMENTO - LÍQUIDOS",
+        "ROTULAGEM - LÍQUIDOS",
+        "ENVASE DE LÍQUIDOS"
     ],
 
     "Kaio Bizone": [
-        "Sala de Formulação (térreo)"
+        "FORMULAÇÃO",
+        "FRACIONADO",
+        "HOMOGENEIZAÇÃO"
     ]
 };
+
+// ============================================================
+// REGRAS DE TURNO POR SALA
+// ============================================================
+
+const TURNO_PADRAO = {
+    inicio: "08:00",
+    fim: "18:00",
+    cruzaMeiaNoite: false
+};
+
+
+const turnosPorSala = {
+
+    "ENCARTUCHAMENTO - LÍQUIDOS": {
+        inicio: "05:00",
+        fim: "00:30",
+        cruzaMeiaNoite: true
+    },
+
+    "ROTULAGEM - LÍQUIDOS": {
+        inicio: "05:00",
+        fim: "00:30",
+        cruzaMeiaNoite: true
+    },
+
+    "ENVASE DE LÍQUIDOS": {
+        inicio: "05:00",
+        fim: "00:30",
+        cruzaMeiaNoite: true
+    },
+
+    "CONFERENCIA": {
+        inicio: "05:00",
+        fim: "00:30",
+        cruzaMeiaNoite: true
+    },
+
+    "Sala de Datação (Líquidos)": {
+        inicio: "05:00",
+        fim: "00:30",
+        cruzaMeiaNoite: true
+    },
+
+    "Sala de Rotulagem (Líquidos)": {
+        inicio: "05:00",
+        fim: "00:30",
+        cruzaMeiaNoite: true
+    },
+
+    "Sala de Envase (Líquidos)": {
+        inicio: "05:00",
+        fim: "00:30",
+        cruzaMeiaNoite: true
+    },
+
+    "Sala de Conferência": {
+        inicio: "05:00",
+        fim: "00:30",
+        cruzaMeiaNoite: true
+    }
+};
+
+
+function obterTurnoDaSala(sala) {
+
+    return turnosPorSala[sala] || TURNO_PADRAO;
+}
 
 // ============================================================
 // UTILITÁRIOS
@@ -246,6 +317,8 @@ function paradaParaSupabase(parada) {
         data: parada.data,
         horainicio: parada.horaInicio,
         horafim: parada.horaFim || null,
+        datafim: parada.dataFim || null,
+        regra_turno: parada.regraTurno === true,
         ativa: parada.ativa
     };
 }
@@ -511,6 +584,8 @@ function supabaseParaLocal(registro) {
         data: registro.data,
         horaInicio: registro.horainicio,
         horaFim: registro.horafim,
+        dataFim: registro.datafim || "",
+        regraTurno: registro.regra_turno === true,
         ativa: registro.ativa
     };
 }
@@ -761,6 +836,272 @@ function calcularDuracao(inicio, fim) {
 
 
 // ============================================================
+// DURAÇÃO CONTABILIZADA DENTRO DO TURNO
+// ============================================================
+
+function somarDiasString(data, dias) {
+
+    if (!data) {
+        return "";
+    }
+
+    const partes = data.split("-");
+
+    if (partes.length < 3) {
+        return "";
+    }
+
+    const d = new Date(
+        Number(partes[0]),
+        Number(partes[1]) - 1,
+        Number(partes[2])
+    );
+
+    d.setDate(d.getDate() + dias);
+
+    return d.getFullYear() + "-" +
+        String(d.getMonth() + 1).padStart(2, "0") + "-" +
+        String(d.getDate()).padStart(2, "0");
+}
+
+
+function montarDataHora(data, hora) {
+
+    if (!data || !hora) {
+        return null;
+    }
+
+    const partesData = data.split("-");
+    const partesHora = hora.split(":");
+
+    if (partesData.length < 3 || partesHora.length < 2) {
+        return null;
+    }
+
+    const d = new Date(
+        Number(partesData[0]),
+        Number(partesData[1]) - 1,
+        Number(partesData[2]),
+        Number(partesHora[0]),
+        Number(partesHora[1]),
+        partesHora[2] ? Number(partesHora[2]) : 0,
+        0
+    );
+
+    if (isNaN(d.getTime())) {
+        return null;
+    }
+
+    return d;
+}
+
+
+function montarDataHoraDoDia(diaBase, hora) {
+
+    const partes = hora.split(":");
+
+    return new Date(
+        diaBase.getFullYear(),
+        diaBase.getMonth(),
+        diaBase.getDate(),
+        Number(partes[0]),
+        Number(partes[1] || 0),
+        0,
+        0
+    );
+}
+
+
+function calcularMillisContabilizados(parada, referencia) {
+
+    if (!parada) {
+        return null;
+    }
+
+    const inicio = montarDataHora(
+        parada.data,
+        parada.horaInicio
+    );
+
+    if (!inicio) {
+        return null;
+    }
+
+    let fim = null;
+
+    if (parada.ativa) {
+
+        fim = referencia
+            ? new Date(referencia)
+            : new Date();
+
+    } else {
+
+        fim = montarDataHora(
+            parada.dataFim || parada.data,
+            parada.horaFim
+        );
+
+        if (
+            fim &&
+            !parada.dataFim &&
+            parada.horaFim &&
+            parada.horaInicio &&
+            parada.horaFim < parada.horaInicio
+        ) {
+            fim.setDate(fim.getDate() + 1);
+        }
+    }
+
+    if (!fim) {
+        return null;
+    }
+
+    if (fim.getTime() <= inicio.getTime()) {
+        return 0;
+    }
+
+    const turno = obterTurnoDaSala(parada.sala);
+
+    let total = 0;
+
+    const dia = new Date(
+        inicio.getFullYear(),
+        inicio.getMonth(),
+        inicio.getDate()
+    );
+
+    const limite = new Date(
+        fim.getFullYear(),
+        fim.getMonth(),
+        fim.getDate()
+    );
+
+    while (dia.getTime() <= limite.getTime()) {
+
+        const diaSemana = dia.getDay();
+
+        if (diaSemana >= 1 && diaSemana <= 5) {
+
+            const janelaInicio =
+                montarDataHoraDoDia(dia, turno.inicio);
+
+            const janelaFim =
+                montarDataHoraDoDia(dia, turno.fim);
+
+            if (turno.cruzaMeiaNoite) {
+                janelaFim.setDate(janelaFim.getDate() + 1);
+            }
+
+            const inicioInterseccao = Math.max(
+                janelaInicio.getTime(),
+                inicio.getTime()
+            );
+
+            const fimInterseccao = Math.min(
+                janelaFim.getTime(),
+                fim.getTime()
+            );
+
+            if (fimInterseccao > inicioInterseccao) {
+                total += fimInterseccao - inicioInterseccao;
+            }
+        }
+
+        dia.setDate(dia.getDate() + 1);
+    }
+
+    return total;
+}
+
+
+function calcularDuracaoContabilizada(parada, referencia) {
+
+    const millis =
+        calcularMillisContabilizados(parada, referencia);
+
+    if (millis === null) {
+        return null;
+    }
+
+    return Math.round(millis / 60000);
+}
+
+
+function calcularDuracaoRegistro(parada, referencia) {
+
+    if (!parada) {
+        return null;
+    }
+
+    if (!parada.regraTurno) {
+        return calcularDuracao(parada.horaInicio, parada.horaFim);
+    }
+
+    if (parada.ativa) {
+        return null;
+    }
+
+    return calcularDuracaoContabilizada(parada, referencia);
+}
+
+
+function calcularCronometroParada(parada, referencia) {
+
+    if (parada && parada.regraTurno) {
+
+        const millis =
+            calcularMillisContabilizados(parada, referencia);
+
+        if (millis === null) {
+            return 0;
+        }
+
+        return Math.floor(millis / 1000);
+    }
+
+    return calcularCronometro(parada.data, parada.horaInicio);
+}
+
+
+function obterIntervaloOcorrencia(parada) {
+
+    if (!parada) {
+        return { inicio: "", fim: "" };
+    }
+
+    const inicio = parada.data || "";
+
+    let fim = parada.dataFim || parada.data || "";
+
+    if (
+        !parada.dataFim &&
+        parada.horaFim &&
+        parada.horaInicio &&
+        parada.horaFim < parada.horaInicio
+    ) {
+        fim = somarDiasString(parada.data, 1);
+    }
+
+    return { inicio: inicio, fim: fim };
+}
+
+
+function formatarFimRegistro(parada) {
+
+    if (!parada || !parada.horaFim) {
+        return "Em andamento";
+    }
+
+    if (parada.dataFim && parada.dataFim !== parada.data) {
+        return formatarData(parada.dataFim) + " " + parada.horaFim;
+    }
+
+    return parada.horaFim;
+}
+
+
+// ============================================================
 // FORMATAR DURAÇÃO
 // ============================================================
 
@@ -897,9 +1238,9 @@ function iniciarCronometro(parada) {
         }
 
         const segundos =
-            calcularCronometro(
-                parada.data,
-                parada.horaInicio
+            calcularCronometroParada(
+                parada,
+                new Date()
             );
 
         elemento.innerText =
@@ -1599,6 +1940,8 @@ function salvarNovaParada() {
 
         horaFim: "",
 
+        regraTurno: true,
+
         ativa: true
 
     };
@@ -1811,10 +2154,7 @@ function abrirHistoricoIndividual(sala) {
         paradas.forEach(function(parada) {
 
             const duracao =
-                calcularDuracao(
-                    parada.horaInicio,
-                    parada.horaFim
-                );
+                calcularDuracaoRegistro(parada);
 
 
             html += `
@@ -1844,10 +2184,7 @@ function abrirHistoricoIndividual(sala) {
 
                     <p>
                         <b>⏹️ Fim:</b>
-                        ${
-                            parada.horaFim ||
-                            "Em andamento"
-                        }
+                        ${formatarFimRegistro(parada)}
                     </p>
 
                     <p>
@@ -2009,6 +2346,21 @@ function editarParada(id) {
 
 
             <label>
+                <b>📅 Data final:</b>
+            </label>
+
+            <br>
+
+            <input
+                type="date"
+                id="editarDataFim"
+                value="${parada.dataFim || ""}"
+            >
+
+            <br><br>
+
+
+            <label>
                 <b>⚠️ Motivo:</b>
             </label>
 
@@ -2149,6 +2501,9 @@ function salvarEdicao(id) {
     const fim =
         document.getElementById("editarFim").value;
 
+    const dataFimInformada =
+        document.getElementById("editarDataFim").value;
+
     const motivo =
         document.getElementById("editarMotivo").value;
 
@@ -2220,6 +2575,33 @@ function salvarEdicao(id) {
 
 
     // --------------------------------------------------------
+    // DATA FINAL
+    // --------------------------------------------------------
+
+    let dataFim = dataFimInformada;
+
+    if (fim === "") {
+
+        dataFim = "";
+
+    } else if (!dataFim) {
+
+        dataFim = (fim < inicio)
+            ? somarDiasString(data, 1)
+            : data;
+    }
+
+    if (fim && dataFim && dataFim < data) {
+
+        alert(
+            "A data final não pode ser anterior à data inicial."
+        );
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
     // ATUALIZA DADOS
     // --------------------------------------------------------
 
@@ -2228,6 +2610,8 @@ function salvarEdicao(id) {
     paradas[index].horaInicio = inicio;
 
     paradas[index].horaFim = fim;
+
+    paradas[index].dataFim = dataFim;
 
     paradas[index].motivo = motivo;
 
@@ -2880,7 +3264,7 @@ function gerarResumoPorSala(paradasPeriodo) {
         }
 
         const grupo = dadosPorSala[parada.sala];
-        const duracao = calcularDuracao(parada.horaInicio, parada.horaFim);
+        const duracao = calcularDuracaoRegistro(parada);
 
         grupo.paradas.push(parada);
 
@@ -3145,9 +3529,13 @@ function gerarRelatorio() {
     const paradasPeriodo =
         todasParadas.filter(function(parada) {
 
+            const intervalo =
+                obterIntervaloOcorrencia(parada);
+
             return (
-                parada.data >= inicio &&
-                parada.data <= fim
+                intervalo.inicio &&
+                intervalo.inicio <= fim &&
+                intervalo.fim >= inicio
             );
 
         });
@@ -3171,10 +3559,7 @@ function gerarRelatorio() {
     paradasPeriodo.forEach(function(parada) {
 
         const duracao =
-            calcularDuracao(
-                parada.horaInicio,
-                parada.horaFim
-            );
+            calcularDuracaoRegistro(parada);
 
 
         // Paradas ainda abertas
@@ -3363,10 +3748,7 @@ function gerarRelatorio() {
 
 
                 const duracao =
-                    calcularDuracao(
-                        item.horaInicio,
-                        item.horaFim
-                    );
+                    calcularDuracaoRegistro(item);
 
 
                 historico += `
@@ -3411,7 +3793,7 @@ function gerarRelatorio() {
 
                         <p>
                             <b>⏹️ Fim:</b>
-                            ${item.horaFim || "Em andamento"}
+                            ${formatarFimRegistro(item)}
                         </p>
 
 
